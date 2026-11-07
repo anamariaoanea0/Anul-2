@@ -1,0 +1,5 @@
+2;Jon;Snow;25
+4;Michael;Jakson;35
+5;Maria;Man;20
+6;Vlad;Pop;25
+7;Anda;Adam;30
