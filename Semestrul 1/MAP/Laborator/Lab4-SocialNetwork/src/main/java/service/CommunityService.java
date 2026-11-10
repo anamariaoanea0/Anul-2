@@ -106,7 +106,6 @@ public class CommunityService {
     public List<Long> getMostSociableCommunity() {
         Map<Long, List<Long>> adjList = buildGraph();
 
-        // Cerința 3: Aflare comunitate cu longest path folosind stream si Comparator.comparingInt
         return getAllCommunities().stream()
                 .max(Comparator.comparingInt(community -> community.stream()
                         .mapToInt(node -> longestPathFromNode(node, adjList, new ArrayList<>()))

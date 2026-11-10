@@ -48,10 +48,8 @@ public abstract class AbstractFileRepository<ID, E extends Entity<ID>> extends I
         }
 
         try {
-            // Citim liniile într-o listă
             List<String> lines = Files.readAllLines(path);
 
-            // Parcurgem indicii cu IntStream
             IntStream.range(0, lines.size()).forEach(index -> {
                 String line = lines.get(index);
                 if (!line.isBlank()) {
@@ -59,7 +57,6 @@ public abstract class AbstractFileRepository<ID, E extends Entity<ID>> extends I
                         E entity = extractEntity(line);
                         super.save(entity);
                     } catch (Exception e) {
-                        // index + 1 pentru ca linia 1 e la indexul 0
                         System.out.println("The line " + (index + 1) + " from " + fileName + " is invalid: " + e.getMessage() + ". The line was ignored.");
                     }
                 }
