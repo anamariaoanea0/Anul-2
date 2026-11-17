@@ -40,6 +40,9 @@ public class UserService {
         if (result.isPresent()) {
             throw new ServiceException("A user with this ID already exists!");
         }
+        else{
+            System.out.println("User saved successfully! The assigned ID is: " + newUser.getId());
+        }
     }
 
     /**
