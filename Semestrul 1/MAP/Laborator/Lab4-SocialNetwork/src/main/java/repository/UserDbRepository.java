@@ -9,10 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import util.paging.Page;
+import util.paging.Pageable;
+
 /**
  * Database repository implementation for managing User entities.
  */
-public class UserDbRepository implements Repository<Long, User>{
+public class UserDbRepository implements PagingRepository<Long, User>{
     private final Validator<User> validator;
     private final String url;
     private final String user;
@@ -179,6 +182,82 @@ public class UserDbRepository implements Repository<Long, User>{
 
         } catch (SQLException e) {
             throw new RepositoryException("Error deleting user with ID: " + id, e);
+        }
+    }
+
+    /**
+     * Counts the total number of users in the database.
+     *
+     * @param connection the active database connection
+     * @return the total number of users
+     * @throws SQLException if a database access error occurs
+     */
+    private int count(Connection connection) throws SQLException {
+        String sql = "SELECT COUNT(*) AS count FROM users";
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet result = statement.executeQuery()) {
+            if (result.next()) {
+                return result.getInt("count");
+            }
+            return 0;
+        }
+    }
+
+    /**
+     * Retrieves a single page of users from the database using the given connection.
+     *
+     * @param connection the active database connection
+     * @param pageable the pagination parameters (page number and page size)
+     * @return a list of User entities on the requested page
+     * @throws SQLException if a database access error occurs
+     */
+    private List<User> findAllOnPage(Connection connection, Pageable pageable) throws SQLException {
+        List<User> usersOnPage = new ArrayList<>();
+        String sql = "SELECT * FROM users ORDER BY id LIMIT ? OFFSET ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, pageable.getPageSize());
+            statement.setInt(2, pageable.getPageSize() * pageable.getPageNumber());
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    Long id = resultSet.getLong("id");
+                    String firstName = resultSet.getString("first_name");
+                    String lastName = resultSet.getString("last_name");
+                    int age = resultSet.getInt("age");
+
+                    usersOnPage.add(new User(id, firstName, lastName, age));
+                }
+            }
+        }
+        return usersOnPage;
+    }
+
+    /**
+     * Retrieves a page of User entities along with the total number of users in the database.
+     *
+     * @param pageable the pagination request, must not be null
+     * @return a Page containing the users on the requested page and the total user count
+     * @throws IllegalArgumentException if pageable is null
+     * @throws RepositoryException if a database access error occurs
+     */
+    @Override
+    public Page<User> findAllOnPage(Pageable pageable) {
+        if (pageable == null) {
+            throw new IllegalArgumentException("Pageable must not be null!");
+        }
+
+        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+            int totalNumberOfUsers = count(connection);
+            List<User> usersOnPage;
+            if (totalNumberOfUsers > 0) {
+                usersOnPage = findAllOnPage(connection, pageable);
+            } else {
+                usersOnPage = new ArrayList<>();
+            }
+            return new Page<>(usersOnPage, totalNumberOfUsers);
+        } catch (SQLException e) {
+            throw new RepositoryException("Error retrieving users page from the database", e);
         }
     }
 }
