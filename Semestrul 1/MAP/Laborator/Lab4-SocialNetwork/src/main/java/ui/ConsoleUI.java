@@ -5,6 +5,7 @@ import domain.User;
 import service.CommunityService;
 import service.FriendshipService;
 import service.UserService;
+import util.paging.Page;
 import validator.RepositoryException;
 import validator.ServiceException;
 import validator.ValidationException;
@@ -21,12 +22,14 @@ public class ConsoleUI {
     private final FriendshipService friendshipService;
     private final CommunityService communityService;
     private final Scanner scanner;
+    private final int pageSize;
 
-    public ConsoleUI(UserService userService, FriendshipService friendshipService, CommunityService communityService) {
+    public ConsoleUI(UserService userService, FriendshipService friendshipService, CommunityService communityService, int pageSize) {
         this.userService = userService;
         this.friendshipService = friendshipService;
         this.communityService = communityService;
         this.scanner = new Scanner(System.in);
+        this.pageSize = pageSize;
     }
 
     private void printMenu() {
@@ -39,6 +42,8 @@ public class ConsoleUI {
         System.out.println("6. Print all friendships");
         System.out.println("7. Show number of communities");
         System.out.println("8. Show most sociable community (longest path)");
+        System.out.println("9. Print users (paginated)");
+        System.out.println("10. Print friends of a user (paginated)");
         System.out.println("E. Exit");
         System.out.print("Choose an option: ");
     }
@@ -73,6 +78,12 @@ public class ConsoleUI {
                     break;
                 case "8":
                     handleMostSociableCommunity();
+                    break;
+                case "9":
+                    handlePrintUsersPaginated();
+                    break;
+                case "10":
+                    handlePrintFriendsPaginated();
                     break;
                 case "E":
                     System.out.println("Exiting application.");
@@ -156,7 +167,7 @@ public class ConsoleUI {
         } catch (NumberFormatException e) {
             System.out.println("Error: IDs must be valid numbers!");
         } catch (ValidationException | ServiceException | RepositoryException | IllegalArgumentException e) {
-            System.out.println("Error adding friendship: " + e.getMessage());
+            System.out.println("Error removing friendship: " + e.getMessage());
         }
     }
 
@@ -198,5 +209,101 @@ public class ConsoleUI {
                 .forEach(user ->
                         System.out.println(" - " + user.getFirstName() + " " + user.getLastName() + " (ID: " + user.getId() + ")")
                 );
+    }
+
+
+    private void handlePrintUsersPaginated() {
+        int pageNumber = 0;
+        while (true) {
+            try {
+                Page<User> page = userService.getUsersOnPage(pageNumber, pageSize);
+                int totalElements = page.getTotalNumberOfElements();
+                int totalPages = Math.max(1, (totalElements + pageSize - 1) / pageSize);
+
+                if (pageNumber >= totalPages) {
+                    pageNumber = totalPages - 1;
+                    page = userService.getUsersOnPage(pageNumber, pageSize);
+                }
+
+                System.out.println("\n Users | Page " + (pageNumber + 1) + " of " + totalPages + " (Total: " + totalElements + ") ");
+                if (totalElements == 0) {
+                    System.out.println("No users found.");
+                } else {
+                    page.getElementsOnPage().forEach(user ->
+                            System.out.println("ID: " + user.getId() + ", Name: " + user.getFirstName() + " " + user.getLastName() + ", Age: " + user.getAge())
+                    );
+                }
+
+                System.out.print("[n]ext, [p]revious, [q]uit: ");
+                String cmd = scanner.nextLine().trim().toLowerCase();
+                switch (cmd) {
+                    case "n" -> {
+                        if (pageNumber < totalPages - 1) pageNumber++;
+                        else System.out.println("Already on the last page!");
+                    }
+                    case "p" -> {
+                        if (pageNumber > 0) pageNumber--;
+                        else System.out.println("Already on the first page!");
+                    }
+                    case "q" -> { return; }
+                    default -> System.out.println("Unknown command!");
+                }
+            } catch (IllegalArgumentException | ServiceException | RepositoryException e) {
+                System.out.println("Error: " + e.getMessage());
+                return;
+            }
+        }
+    }
+
+    private void handlePrintFriendsPaginated() {
+        System.out.print("Enter user ID: ");
+        Long userId;
+        try {
+            userId = Long.parseLong(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            System.out.println("Error: ID must be a valid number!");
+            return;
+        }
+
+        int pageNumber = 0;
+        while (true) {
+            try {
+                Page<User> page = friendshipService.getFriendsOnPage(userId, pageNumber, pageSize);
+                int totalElements = page.getTotalNumberOfElements();
+                int totalPages = Math.max(1, (totalElements + pageSize - 1) / pageSize);
+
+                if (pageNumber >= totalPages) {
+                    pageNumber = totalPages - 1;
+                    page = friendshipService.getFriendsOnPage(userId, pageNumber, pageSize);
+                }
+
+                System.out.println("\n Friends of user " + userId + " | Page " + (pageNumber + 1) + " of " + totalPages + " (Total: " + totalElements + ") ");
+                if (totalElements == 0) {
+                    System.out.println("This user has no friends.");
+                } else {
+                    page.getElementsOnPage().forEach(friend ->
+                            System.out.println("ID: " + friend.getId() + ", Name: " + friend.getFirstName() + " " + friend.getLastName() + ", Age: " + friend.getAge())
+                    );
+                }
+
+                System.out.print("[n]ext, [p]revious, [q]uit: ");
+                String cmd = scanner.nextLine().trim().toLowerCase();
+                switch (cmd) {
+                    case "n" -> {
+                        if (pageNumber < totalPages - 1) pageNumber++;
+                        else System.out.println("Already on the last page!");
+                    }
+                    case "p" -> {
+                        if (pageNumber > 0) pageNumber--;
+                        else System.out.println("Already on the first page!");
+                    }
+                    case "q" -> { return; }
+                    default -> System.out.println("Unknown command!");
+                }
+            } catch (IllegalArgumentException | ServiceException | RepositoryException e) {
+                System.out.println("Error: " + e.getMessage());
+                return;
+            }
+        }
     }
 }

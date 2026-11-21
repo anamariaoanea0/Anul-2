@@ -32,7 +32,8 @@ public class Main {
             FriendshipService friendshipService = new FriendshipService(userRepo, friendshipRepo);
             CommunityService communityService = new CommunityService(userService, friendshipService);
 
-            ConsoleUI ui = new ConsoleUI(userService, friendshipService, communityService);
+            int pageSize = factory.getPageSize();
+            ConsoleUI ui = new ConsoleUI(userService, friendshipService, communityService, pageSize);
             ui.run();
 
         } catch(RepositoryException e){

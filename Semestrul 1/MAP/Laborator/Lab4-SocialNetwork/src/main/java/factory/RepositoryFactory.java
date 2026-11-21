@@ -132,4 +132,26 @@ public class RepositoryFactory {
         }
         return factoryFunction.apply(validator);
     }
+
+    /**
+     * Retrieves the configured page size for pagination from config.properties.
+     *
+     * @return the page size as a positive integer
+     * @throws RepositoryException if page.size is missing, not a valid integer, or <= 0
+     */
+    public int getPageSize() {
+        String pageSizeStr = properties.getProperty("page.size");
+        if (pageSizeStr == null || pageSizeStr.isBlank()) {
+            throw new RepositoryException("The page.size property is missing from config.properties");
+        }
+        try {
+            int pageSize = Integer.parseInt(pageSizeStr.trim());
+            if (pageSize <= 0) {
+                throw new RepositoryException("The page.size property must be a positive integer!");
+            }
+            return pageSize;
+        } catch (NumberFormatException e) {
+            throw new RepositoryException("Invalid page.size value in config.properties: " + pageSizeStr, e);
+        }
+    }
 }

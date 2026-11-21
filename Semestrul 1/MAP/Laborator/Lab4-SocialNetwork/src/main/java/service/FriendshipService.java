@@ -3,7 +3,10 @@ package service;
 import domain.Friendship;
 import domain.Tuple;
 import domain.User;
+import repository.FriendshipDbRepository;
 import repository.Repository;
+import util.paging.Page;
+import util.paging.Pageable;
 import validator.ServiceException;
 
 import java.util.Optional;
@@ -61,6 +64,29 @@ public class FriendshipService {
      */
     public Iterable<Friendship> getAllFriendships() {
         return friendshipRepo.findAll();
+    }
+
+    /**
+     * Retrieves a page of friends for a specific user.
+     *
+     * @param userId the ID of the user whose friends are requested
+     * @param pageNumber the zero-based page index, must be >= 0
+     * @param pageSize the number of friends per page, must be > 0
+     * @return a Page containing the friends on the requested page and the total friend count
+     * @throws IllegalArgumentException if pageNumber < 0 or pageSize <= 0
+     * @throws ServiceException if the user does not exist or the configured repository does not support pagination
+     */
+    public Page<User> getFriendsOnPage(Long userId, int pageNumber, int pageSize) {
+        if (pageNumber < 0 || pageSize <= 0) {
+            throw new IllegalArgumentException("Page number must be >= 0 and page size must be > 0!");
+        }
+        userRepo.findOne(userId)
+                .orElseThrow(() -> new ServiceException("User with ID " + userId + " does not exist!"));
+
+        if (friendshipRepo instanceof FriendshipDbRepository dbRepo) {
+            return dbRepo.findFriendsOnPage(userId, new Pageable(pageNumber, pageSize));
+        }
+        throw new ServiceException("Pagination is only supported for DATABASE repository!");
     }
 
 }

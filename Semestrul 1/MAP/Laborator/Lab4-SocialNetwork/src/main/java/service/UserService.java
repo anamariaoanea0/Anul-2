@@ -3,7 +3,10 @@ package service;
 import domain.Friendship;
 import domain.Tuple;
 import domain.User;
+import repository.PagingRepository;
 import repository.Repository;
+import util.paging.Page;
+import util.paging.Pageable;
 import validator.ServiceException;
 import validator.ValidationException;
 
@@ -81,5 +84,24 @@ public class UserService {
     public User getUser(Long id) {
         return userRepo.findOne(id)
                 .orElseThrow(() -> new ServiceException("User with ID " + id + " not found!"));
+    }
+
+    /**
+     * Retrieves a page of users from the repository.
+     *
+     * @param pageNumber the zero-based page index, must be >= 0
+     * @param pageSize the number of users per page, must be > 0
+     * @return a Page containing the users on the requested page and the total user count
+     * @throws IllegalArgumentException if pageNumber < 0 or pageSize <= 0
+     * @throws ServiceException if the configured repository does not support pagination
+     */
+    public Page<User> getUsersOnPage(int pageNumber, int pageSize) {
+        if (pageNumber < 0 || pageSize <= 0) {
+            throw new IllegalArgumentException("Page number must be >= 0 and page size must be > 0!");
+        }
+        if (userRepo instanceof PagingRepository<Long, User> pagingRepo) {
+            return pagingRepo.findAllOnPage(new Pageable(pageNumber, pageSize));
+        }
+        throw new ServiceException("Pagination is only supported for DATABASE repository!");
     }
 }
